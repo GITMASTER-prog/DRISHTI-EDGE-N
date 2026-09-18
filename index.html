@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRISHTI EDGE GCS — Rotax 914 MALE UAV Engine Digital Twin</title>
+    <link rel="icon" type="image/x-icon" href="assets/drishTI.ico">
+    <link rel="icon" type="image/png" href="assets/drishTI-logo.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="gcs-app-container">
+        <!-- ============================================================
+             LEFT CONTROL & CONFIGURATION SIDEBAR
+             ============================================================ -->
+        <aside class="gcs-sidebar">
+            <!-- Brand Header -->
+            <div class="sidebar-header">
+                <img src="assets/drishTI-emblem.png" alt="DRISHTI Eagle Emblem" class="brand-emblem">
+                <div class="brand-text">
+                    <h1>DRISHTI EDGE GCS</h1>
+                    <p>ROTAX 914 • MISSION DIGITAL TWIN</p>
+                </div>
+            </div>
+
+            <!-- Aircraft Selection -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">Aircraft / Test Bed</div>
+                <select id="select-uav" class="gcs-select">
+                    <option value="UAV-01 (Primary Testbed)">UAV-01 (Primary Testbed)</option>
+                    <option value="UAV-02">UAV-02 (Operational)</option>
+                    <option value="UAV-03">UAV-03 (Maintenance Depot)</option>
+                    <option value="UAV-04">UAV-04 (Grounded / Overhaul)</option>
+                    <option value="UAV-05">UAV-05 (Standby / Ready)</option>
+                </select>
+                <div class="telemetry-link-badge">
+                    <div class="pulse-dot"></div>
+                    <span>Active Telemetry Link (10 Hz)</span>
+                </div>
+            </div>
+
+            <!-- Navigation View Modes -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">Navigation View</div>
+                <div class="nav-tab-link active sidebar-nav-btn" data-tab="cockpit" style="margin-bottom: 4px;">
+                    <span>✈️ Live Diagnostic Cockpit</span>
+                </div>
+                <div class="nav-tab-link sidebar-nav-btn" data-tab="prediction" style="margin-bottom: 4px;">
+                    <span>🔮 Prognostic Fault Prediction</span>
+                </div>
+                <div class="nav-tab-link sidebar-nav-btn" data-tab="fleet" style="margin-bottom: 4px;">
+                    <span>🛩️ Fleet Digital Twin</span>
+                </div>
+                <div class="nav-tab-link sidebar-nav-btn" data-tab="replay" style="margin-bottom: 4px;">
+                    <span>🔄 Mission Replay & Analytics</span>
+                </div>
+                <div class="nav-tab-link sidebar-nav-btn" data-tab="debrief" style="margin-bottom: 4px;">
+                    <span>📑 Post-Flight Report Generator</span>
+                </div>
+                <div class="nav-tab-link sidebar-nav-btn" data-tab="maint" style="margin-bottom: 4px;">
+                    <span>🛠️ Maintenance Planner</span>
+                </div>
+                <div class="nav-tab-link sidebar-nav-btn" data-tab="passport" style="margin-bottom: 4px;">
+                    <span>📜 Engine Passport</span>
+                </div>
+                <div class="nav-tab-link sidebar-nav-btn" data-tab="settings">
+                    <span>⚙️ Settings</span>
+                </div>
+            </div>
+
+            <!-- Mission Control Sliders (Altitude, Throttle, Injection Timing, Duration) -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">Mission Control</div>
+                <div class="mode-toggle-group">
+                    <label class="mode-radio-label">
+                        <input type="radio" name="mission-mode" value="Manual" checked>
+                        <span>Manual</span>
+                    </label>
+                    <label class="mode-radio-label">
+                        <input type="radio" name="mission-mode" value="Preset">
+                        <span>Preset</span>
+                    </label>
+                </div>
+
+                <div id="preset-selection-row" style="display: none; margin-bottom: 10px;">
+                    <div class="slider-labels"><span class="lbl-name">Profile Preset</span></div>
+                    <select id="select-mission-preset" class="gcs-select">
+                        <option value="ISR Long-Endurance Cruise">ISR Long-Endurance Cruise</option>
+                        <option value="High Altitude">High Altitude (16,000 ft)</option>
+                        <option value="Hot Weather (ISA Baseline)">Hot Weather (ISA Baseline)</option>
+                        <option value="Rapid Throttle Transitions">Rapid Throttle Transitions</option>
+                        <option value="Endurance">Endurance (10,000 ft)</option>
+                    </select>
+                </div>
+
+                <div id="manual-sliders-group">
+                    <!-- 1. Altitude -->
+                    <div class="slider-control-row">
+                        <div class="slider-labels">
+                            <span class="lbl-name">Altitude</span>
+                            <span class="lbl-val" id="val-altitude">10,000 ft</span>
+                        </div>
+                        <input type="range" id="slider-altitude" class="gcs-slider" min="0" max="20000" step="250" value="10000">
+                    </div>
+
+                    <!-- 2. Throttle -->
+                    <div class="slider-control-row">
+                        <div class="slider-labels">
+                            <span class="lbl-name">Throttle (%)</span>
+                            <span class="lbl-val" id="val-throttle">55%</span>
+                        </div>
+                        <input type="range" id="slider-throttle" class="gcs-slider" min="0" max="100" step="1" value="55">
+                    </div>
+
+                    <!-- 3. Injection Timing (Added directly into Mission Control) -->
+                    <div class="slider-control-row">
+                        <div class="slider-labels">
+                            <span class="lbl-name">Injection Timing</span>
+                            <span class="lbl-val" id="val-injection">24.5° BTDC</span>
+                        </div>
+                        <input type="range" id="slider-injection-timing" class="gcs-slider" min="15.0" max="35.0" step="0.1" value="24.5">
+                    </div>
+
+                    <!-- 4. Mission Duration -->
+                    <div class="slider-control-row">
+                        <div class="slider-labels">
+                            <span class="lbl-name">Mission Time (hr)</span>
+                            <span class="lbl-val" id="val-duration">4.00 hr</span>
+                        </div>
+                        <input type="range" id="slider-duration" class="gcs-slider" min="0.5" max="10.0" step="0.25" value="4.00">
+                    </div>
+                </div>
+
+                <!-- DRISHTI Live Guidance Card -->
+                <div class="guidance-box">
+                    <strong style="color: #38bdf8; display: block; margin-bottom: 3px;">💡 DRISHTI GUIDANCE</strong>
+                    <span id="drishti-guidance-text">At 10,000 ft, recommended 55% throttle for optimum efficiency. Estimated endurance: 7.9 hr</span>
+                    <div><span class="guidance-isa-badge" id="drishti-isa-text">ISA at 10,000 ft: -4.8 °C</span></div>
+                </div>
+            </div>
+
+            <!-- Fault Injection Simulator -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">Fault Injection (Simulated)</div>
+                <div class="fault-check-list">
+                    <label class="fault-check-item">
+                        <input type="checkbox" id="chk-fault-misfire">
+                        <span>Fuel Injector Abnormality</span>
+                    </label>
+                    <label class="fault-check-item">
+                        <input type="checkbox" id="chk-fault-thermal">
+                        <span>Thermal Overheat (High CHT)</span>
+                    </label>
+                    <label class="fault-check-item">
+                        <input type="checkbox" id="chk-fault-mechanical">
+                        <span>Mechanical Imbalance</span>
+                    </label>
+                    <label class="fault-check-item">
+                        <input type="checkbox" id="chk-fault-sensor_drift">
+                        <span>Sensor Drift / Fault</span>
+                    </label>
+                    <label class="fault-check-item">
+                        <input type="checkbox" id="chk-fault-lubrication">
+                        <span>Lubrication Degradation</span>
+                    </label>
+                    <label class="fault-check-item">
+                        <input type="checkbox" id="chk-fault-combustion">
+                        <span>Combustion Instability</span>
+                    </label>
+                    <label class="fault-check-item">
+                        <input type="checkbox" id="chk-fault-coding">
+                        <span>Control / Coding Degradation</span>
+                    </label>
+                    <label class="fault-check-item all-faults">
+                        <input type="checkbox" id="chk-fault-multiple">
+                        <span>Multiple Faults (All Above)</span>
+                    </label>
+                </div>
+                <button id="btn-reset-faults" class="btn-reset-faults">🔄 RESET ALL FAULTS</button>
+            </div>
+        </aside>
+
+        <!-- ============================================================
+             MAIN COCKPIT & FLIGHT GCS CONTENT AREA
+             ============================================================ -->
+        <main class="gcs-main-area">
+
+            <!-- VIEW 1: LIVE DIAGNOSTIC COCKPIT (DEFAULT) -->
+            <div id="view-cockpit" class="gcs-view-panel active">
+                <!-- Cockpit Windshield Canopy Overlay -->
+                <div class="cockpit-canopy-container">
+                    <!-- Top Status Strip -->
+                    <div class="cockpit-top-bar">
+                        <div class="flight-time-card">
+                            <span style="font-size: 8px; color: #94a3b8; display: block;">DATE / TIME (LOCAL)</span>
+                            <span id="utc-clock">21 May 2025 / 12:46:31</span>
+                        </div>
+                        <div class="flight-status-card">
+                            <div>
+                                <span class="status-lbl">FLIGHT STATUS</span>
+                                <div class="status-val">IN FLIGHT</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cockpit Instrument Panel Housing (Matching user's 9-meter layout: 1 Large + 4x2 Cluster) -->
+                    <div class="cockpit-instrument-panel">
+                        <!-- Top Annunciators Strip -->
+                        <div class="annunciator-strip">
+                            <div id="annun-master-warning" class="annunciator-box master-warn">MASTER WARNING</div>
+                            <div id="annun-caution" class="annunciator-box caution">CAUTION</div>
+                            <div id="annun-test" class="annunciator-box annun-test">ANNUN TEST</div>
+                            <div id="annun-system-ok" class="annunciator-box system-ok active">SYSTEM OK</div>
+                        </div>
+
+                        <!-- 9-Meters Instrument Cluster matching media_1788776900669.png -->
+                        <div class="cockpit-layout-container">
+                            <!-- 1. Master Tachometer (Large Circle on the left) -->
+                            <div class="master-gauge-column">
+                                <div class="gauge-canvas-wrapper large-rpm-wrapper">
+                                    <canvas id="gauge-rpm"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- 2. Satellite Instruments Grid (2 Rows of 4 Circles on the right) -->
+                            <div class="satellite-gauges-grid">
+                                <!-- Top Row (4 Dials): MAP, CHT, EGT, POWER -->
+                                <div class="satellite-row">
+                                    <div class="gauge-canvas-wrapper"><canvas id="gauge-map"></canvas></div>
+                                    <div class="gauge-canvas-wrapper"><canvas id="gauge-cht"></canvas></div>
+                                    <div class="gauge-canvas-wrapper"><canvas id="gauge-egt"></canvas></div>
+                                    <div class="gauge-canvas-wrapper"><canvas id="gauge-power"></canvas></div>
+                                </div>
+
+                                <!-- Bottom Row (4 Dials): OIL PRESS, OIL TEMP, VIBRATION, ALTERNATOR HEALTH -->
+                                <div class="satellite-row">
+                                    <div class="gauge-canvas-wrapper"><canvas id="gauge-oil-press"></canvas></div>
+                                    <div class="gauge-canvas-wrapper"><canvas id="gauge-oil-temp"></canvas></div>
+                                    <div class="gauge-canvas-wrapper"><canvas id="gauge-vibration"></canvas></div>
+                                    <div class="gauge-canvas-wrapper"><canvas id="gauge-alternator"></canvas></div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Vertical Tape Meters (Beside the 9 meters) -->
+                            <div class="vertical-tapes-column">
+                                <div class="vertical-tapes-group">
+                                    <div class="tape-canvas-wrapper"><canvas id="tape-fuel-flow"></canvas></div>
+                                    <div class="tape-canvas-wrapper"><canvas id="tape-bus-voltage"></canvas></div>
+                                    <div class="tape-canvas-wrapper"><canvas id="tape-alt-health"></canvas></div>
+                                    <div class="tape-canvas-wrapper"><canvas id="tape-fuel-qty"></canvas></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lower Analytics & Digital Twin Section -->
+                <div class="analytics-section">
+                    <!-- DRISHTI Intelligence Summary Bar (5 Metrics) -->
+                    <div class="intelligence-summary-row">
+                        <div class="summary-metric-card">
+                            <div class="metric-header-lbl">ENGINE HEALTH</div>
+                            <div class="metric-large-val" id="summary-engine-health" style="color: #4ade80;">93%</div>
+                            <div class="metric-delta positive" id="summary-engine-health-delta">↑ 0.0%</div>
+                        </div>
+                        <div class="summary-metric-card">
+                            <div class="metric-header-lbl">ACTIVE FAULTS</div>
+                            <div class="metric-large-val" id="summary-active-faults" style="color: #f8fafc;">0</div>
+                        </div>
+                        <div class="summary-metric-card">
+                            <div class="metric-header-lbl">PREDICTED RUL</div>
+                            <div class="metric-large-val" id="summary-predicted-rul" style="color: #f8fafc;">1541.5 h</div>
+                            <div class="metric-delta positive" id="summary-rul-margin">+1537.8 h margin</div>
+                        </div>
+                        <div class="summary-metric-card">
+                            <div class="metric-header-lbl">RUL CONFIDENCE</div>
+                            <div class="metric-large-val" id="summary-rul-conf" style="color: #4ade80;">90%</div>
+                            <div class="metric-delta positive" id="summary-rul-conf-delta">↑ HIGH</div>
+                        </div>
+                        <div class="summary-metric-card">
+                            <div class="metric-header-lbl">MISSION COMPLETION</div>
+                            <div class="metric-large-val" id="summary-mission-completion" style="color: #4ade80;">72%</div>
+                            <div class="metric-delta positive" id="summary-mission-completion-delta">↑ HIGH</div>
+                        </div>
+                    </div>
+
+                    <!-- Middle Analytics Row (Subsystems, XAI, Feasibility Speedometer, Advisory) -->
+                    <div class="analytics-middle-grid">
+                        <!-- 1. Subsystem Health Breakdown -->
+                        <div class="analytics-panel">
+                            <div class="panel-header-title">Subsystem Health</div>
+                            <div class="subsystem-bars-list">
+                                <div class="sub-bar-row">
+                                    <div class="sub-bar-labels"><span>Thermal Subsystem</span><span id="val-sub-thermal">78%</span></div>
+                                    <div class="sub-bar-track"><div id="bar-sub-thermal" class="sub-bar-fill warn" style="width: 78%;"></div></div>
+                                </div>
+                                <div class="sub-bar-row">
+                                    <div class="sub-bar-labels"><span>Lubrication Subsystem</span><span id="val-sub-lubrication">92%</span></div>
+                                    <div class="sub-bar-track"><div id="bar-sub-lubrication" class="sub-bar-fill nominal" style="width: 92%;"></div></div>
+                                </div>
+                                <div class="sub-bar-row">
+                                    <div class="sub-bar-labels"><span>Fuel System</span><span id="val-sub-fuel">85%</span></div>
+                                    <div class="sub-bar-track"><div id="bar-sub-fuel" class="sub-bar-fill nominal" style="width: 85%;"></div></div>
+                                </div>
+                                <div class="sub-bar-row">
+                                    <div class="sub-bar-labels"><span>Ignition System</span><span id="val-sub-ignition">90%</span></div>
+                                    <div class="sub-bar-track"><div id="bar-sub-ignition" class="sub-bar-fill nominal" style="width: 90%;"></div></div>
+                                </div>
+                                <div class="sub-bar-row">
+                                    <div class="sub-bar-labels"><span>Mechanical System</span><span id="val-sub-mechanical">88%</span></div>
+                                    <div class="sub-bar-track"><div id="bar-sub-mechanical" class="sub-bar-fill nominal" style="width: 88%;"></div></div>
+                                </div>
+                                <div class="sub-bar-row">
+                                    <div class="sub-bar-labels"><span>Electrical System</span><span id="val-sub-electrical">95%</span></div>
+                                    <div class="sub-bar-track"><div id="bar-sub-electrical" class="sub-bar-fill nominal" style="width: 95%;"></div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Active Fault Mitigation (moved from graphs row) -->
+                        <div class="analytics-panel">
+                            <div class="panel-header-title">🛠️ Active Fault Mitigation & Corrective Actions</div>
+                            <div id="corrective-measures-container">
+                                <div class="info-card-empty" style="color: #94a3b8; font-size: 11px; padding: 10px;">
+                                    No active fault simulations injected. Use sidebar to simulate anomalies.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Mission Feasibility & Risk (6-Segment Speedo matching media_1788777398956.jpg) -->
+                        <div class="analytics-panel">
+                            <div class="panel-header-title">Mission Feasibility & Risk</div>
+                            <div class="gauge-feasibility-wrapper">
+                                <canvas id="gauge-feasibility"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- 4. Mission Advisory Card -->
+                        <div class="analytics-panel mission-advisory-panel">
+                            <div>
+                                <div class="panel-header-title">Mission Advisory</div>
+                                <div class="advisory-title warn" id="advisory-title">CONTINUE WITH CAUTION</div>
+                                <div class="advisory-subtitle" id="advisory-subtitle">Monitor engine parameters closely.</div>
+                            </div>
+                            <div class="advisory-metrics-row">
+                                <div class="adv-stat">
+                                    <div class="lbl">Mission Margin</div>
+                                    <div class="val" id="advisory-margin" style="color: #ef4444;">-1.2 h</div>
+                                </div>
+                                <div class="adv-stat">
+                                    <div class="lbl">Remaining Mission</div>
+                                    <div class="val" id="advisory-remain">3.17 h</div>
+                                </div>
+                                <div class="adv-stat">
+                                    <div class="lbl">Total Mission Time</div>
+                                    <div class="val" id="advisory-total">4.00 h</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Analytics Row: Diversion & Distress ATC -->
+                    <div class="analytics-bottom-grid">
+                        <div class="analytics-panel">
+                            <div class="panel-header-title">Mission Safety & Diversion Advisory</div>
+                            <div class="diversion-stats-row">
+                                <div class="diversion-box">
+                                    <div class="lbl">Decision</div>
+                                    <div class="val" id="diversion-decision" style="color: #f59e0b;">CONTINUE WITH CAUTION</div>
+                                </div>
+                                <div class="diversion-box">
+                                    <div class="lbl">Distance to Home</div>
+                                    <div class="val">72 km</div>
+                                </div>
+                                <div class="diversion-box">
+                                    <div class="lbl">Nearest Airport (ETA)</div>
+                                    <div class="val">148 km (Alpha Airfield) <span style="font-size: 10px; color:#94a3b8;">00:28 (28 min)</span></div>
+                                </div>
+                            </div>
+                            <div class="diversion-banner">
+                                🟢 No distress condition. Continue monitoring.
+                            </div>
+                        </div>
+
+                        <div class="analytics-panel">
+                            <div class="panel-header-title">Distress / ATC Message</div>
+                            <div class="atc-radar-container">
+                                <div class="atc-icon">📡</div>
+                                <div>
+                                    <div class="atc-status standby" id="atc-status">STANDBY</div>
+                                    <div class="atc-desc" id="atc-desc">No distress message required. System will auto-transmit if risk becomes HIGH/CRITICAL.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Graphs Row: Real-Time Multi-channel Telemetry Strip Chart & Synthetic Vision & Corrective Actions -->
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px;">
+                        <!-- Live Telemetry Stream Graph -->
+                        <div class="analytics-panel">
+                            <div class="panel-header-title">📈 Real-Time Multi-Channel Telemetry Stream</div>
+                            <canvas id="canvas-live-telemetry" style="width: 100%; height: 160px; border-radius: 4px;"></canvas>
+                        </div>
+
+                        <!-- 3D Flight Corridor -->
+                        <div class="analytics-panel">
+                            <div class="panel-header-title">🛩️ Synthetic Vision / 3D Flight Corridor</div>
+                            <canvas id="canvas-synthetic-vision" style="width: 100%; height: 160px; border-radius: 4px;"></canvas>
+                        </div>
+
+                        <!-- AI / XAI Top Risk Contributors (moved from middle row) -->
+                        <div class="analytics-panel">
+                            <div class="panel-header-title">AI / XAI — Top Risk Contributors</div>
+                            <div class="xai-table-container">
+                                <table class="xai-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Parameter</th>
+                                            <th>Influence</th>
+                                            <th>Why it Matters</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="xai-contributors-body">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: PROGNOSTIC FAULT PREDICTION -->
+            <div id="view-prediction" class="gcs-view-panel">
+                <div class="view-content-wrapper">
+                    <div class="view-title-header">
+                        <span>🔮 Prognostic Fault & Degradation Trajectory Prediction</span>
+                        <span style="font-size: 11px; color: #94a3b8;">AI Time-to-Exceedance Modeler&nbsp;&nbsp;·&nbsp;&nbsp;<span style="color:#38bdf8;">PROJECTION ACTIVE</span></span>
+                    </div>
+
+                    <!-- Mission scenario selector -->
+                    <div class="analytics-panel" style="margin-bottom: 12px; padding: 10px 12px;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <span class="panel-header-title" style="margin:0; margin-right:6px;">MISSION SCENARIO</span>
+                            <div class="scenario-chip active" data-scenario="normal">Normal Cruise</div>
+                            <div class="scenario-chip" data-scenario="highalt">High Altitude</div>
+                            <div class="scenario-chip" data-scenario="hot">Hot Weather</div>
+                            <div class="scenario-chip" data-scenario="long">Long Endurance</div>
+                            <div class="scenario-chip" data-scenario="rapid">Rapid Throttle</div>
+                            <div class="scenario-chip" data-scenario="custom">Custom Mission</div>
+                            <button id="prog-reset-btn" class="btn-rectify" style="margin-left:auto; padding:5px 10px; font-size:10px;">↺ RESET TO CURRENT STATE</button>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 300px 1fr 300px; gap: 12px;">
+                        <!-- Left column: mission inputs -->
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">Prospective Mission Inputs</div>
+                                <div class="slider-control-row">
+                                    <div class="slider-labels"><span class="lbl-name">Projected Altitude</span><span class="lbl-val" id="pred-val-alt">8,000 ft</span></div>
+                                    <input type="range" id="pred-alt-slider" class="gcs-slider" min="0" max="16000" step="500" value="8000">
+                                </div>
+                                <div class="slider-control-row">
+                                    <div class="slider-labels"><span class="lbl-name">Projected Throttle</span><span class="lbl-val" id="pred-val-th">65%</span></div>
+                                    <input type="range" id="pred-th-slider" class="gcs-slider" min="20" max="100" step="1" value="65">
+                                </div>
+                                <div class="slider-control-row">
+                                    <div class="slider-labels"><span class="lbl-name">Projected Duration</span><span class="lbl-val" id="pred-val-dur">4.0 h</span></div>
+                                    <input type="range" id="pred-dur-slider" class="gcs-slider" min="1" max="24" step="0.5" value="4.0">
+                                </div>
+                                <div class="slider-control-row">
+                                    <div class="slider-labels"><span class="lbl-name">Ambient (ISA Offset)</span><span class="lbl-val" id="pred-val-dt">+0 °C ISA</span></div>
+                                    <input type="range" id="pred-dt-slider" class="gcs-slider" min="-20" max="25" step="1" value="0">
+                                </div>
+                                <div class="slider-control-row">
+                                    <div class="slider-labels"><span class="lbl-name">Throttle Profile</span><span class="lbl-val" id="pred-val-cycle">Steady</span></div>
+                                    <select id="pred-cycle-select" class="gcs-dropdown" style="width:100%; margin-top:4px;">
+                                        <option value="steady">Steady cruise</option>
+                                        <option value="moderate">Moderate cycling</option>
+                                        <option value="rapid">Rapid throttle transients</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Current engine state (live) -->
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">CURRENT ENGINE STATE <span style="color:#4ade80;">● LIVE</span></div>
+                                <div class="prog-state-grid">
+                                    <div class="prog-stat"><div class="lbl">Engine Health</div><div class="val" id="cur-health">93%</div></div>
+                                    <div class="prog-stat"><div class="lbl">Current CHT</div><div class="val" id="cur-cht">96.0 °C</div></div>
+                                    <div class="prog-stat"><div class="lbl">Current EGT</div><div class="val" id="cur-egt">652 °C</div></div>
+                                    <div class="prog-stat"><div class="lbl">Current RPM</div><div class="val" id="cur-rpm">4303</div></div>
+                                    <div class="prog-stat"><div class="lbl">Current RUL</div><div class="val" id="cur-rul">154 h</div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Center: trajectory chart -->
+                        <div class="analytics-panel">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <div class="panel-header-title">PROJECTED THERMAL & DEGRADATION TRAJECTORY</div>
+                                <div class="prog-legend">
+                                    <label class="series-toggle cht"><input type="checkbox" id="prog-series-cht" checked> CHT</label>
+                                    <label class="series-toggle stress"><input type="checkbox" id="prog-series-stress" checked> Thermal Stress</label>
+                                    <label class="series-toggle health"><input type="checkbox" id="prog-series-health" checked> Engine Health</label>
+                                </div>
+                            </div>
+                            <canvas id="canvas-prognostic-trajectory" style="width: 100%; height: 300px;"></canvas>
+
+                            <!-- Time-to-exceedance -->
+                            <div class="tte-row">
+                                <div class="tte-box">
+                                    <div class="lbl">TIME TO THRESHOLD — CHT WARNING 120°C</div>
+                                    <div class="val warn" id="tte-warn">—</div>
+                                </div>
+                                <div class="tte-box">
+                                    <div class="lbl">TIME TO THRESHOLD — OEM LIMIT 135°C</div>
+                                    <div class="val crit" id="tte-limit">—</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right column: projection outputs -->
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">REMAINING USEFUL LIFE</div>
+                                <div style="display:flex; align-items:baseline; gap:10px;">
+                                    <div class="metric-large-val" id="rul-proj-val" style="color:#38bdf8;">127</div>
+                                    <div style="font-size:10px; color:#94a3b8;">flight hours projected</div>
+                                </div>
+                                <div class="prog-kv"><span>Confidence (prototype indicator)</span><b id="rul-conf-val">87%</b></div>
+                                <div class="prog-kv"><span>RUL Change</span><b id="rul-change-val">−27 h from current baseline</b></div>
+                                <div class="prog-kv"><span>Maintenance Window</span><b id="rul-maint-window" style="color:#4ade80;">32–45 flight hours</b></div>
+                            </div>
+
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">PROJECTED ENGINE STATE</div>
+                                <div class="prog-state-grid">
+                                    <div class="prog-stat"><div class="lbl">Projected Health</div><div class="val" id="proj-health">86%</div></div>
+                                    <div class="prog-stat"><div class="lbl">Max Projected CHT</div><div class="val" id="proj-cht">121°C</div></div>
+                                    <div class="prog-stat"><div class="lbl">Peak Thermal Stress</div><div class="val" id="proj-stress">84 / 100</div></div>
+                                    <div class="prog-stat"><div class="lbl">Projected RUL</div><div class="val" id="proj-rul">127 h</div></div>
+                                    <div class="prog-stat"><div class="lbl">RUL Change</div><div class="val" id="proj-rul-change">−27 h</div></div>
+                                </div>
+                            </div>
+
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">TOP DEGRADATION CONTRIBUTORS</div>
+                                <div id="prog-contributors"></div>
+                            </div>
+
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">PREDICTED CONDITION</div>
+                                <div id="prog-condition-text" class="prog-condition ok">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 3: FLEET DIGITAL TWIN -->
+            <div id="view-fleet" class="gcs-view-panel">
+                <div class="view-content-wrapper">
+                    <div class="view-title-header">
+                        <span>🛩️ Fleet Digital Twin & Cross-Aircraft Health Matrix</span>
+                        <span style="font-size: 11px; color: #94a3b8;">5 Active Airframes Tracked</span>
+                    </div>
+                    <div class="analytics-panel" style="margin-bottom: 16px;">
+                        <div class="panel-header-title">MALE UAV Fleet Telemetry Roster</div>
+                        <table class="gcs-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Tail Number</th>
+                                    <th>Engine Spec</th>
+                                    <th>Health %</th>
+                                    <th>RUL (Hours to Overhaul)</th>
+                                    <th>Risk Tier</th>
+                                    <th>Operational State</th>
+                                    <th>Flight Hours / TBO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fleet-table-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="analytics-panel">
+                        <div class="panel-header-title">Comparative Engine Health Across Airframes</div>
+                        <canvas id="chart-fleet-health" style="width: 100%; height: 240px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 4: MISSION REPLAY & ANALYTICS -->
+            <div id="view-replay" class="gcs-view-panel">
+                <div class="view-content-wrapper">
+                    <div class="view-title-header">
+                        <span>🔄 Mission Flight Replay & Timeline Scrubbing</span>
+                        <span id="replay-time-label" style="font-family: var(--font-mono); color: #38bdf8;">0.0 min / 41.3 min</span>
+                    </div>
+
+                    <!-- Mission information bar -->
+                    <div class="analytics-panel rp-mission-bar">
+                        <div><span class="lbl">Mission</span><b>MALE UAV Endurance Mission</b></div>
+                        <div><span class="lbl">Date</span><b>SIMULATED MISSION</b></div>
+                        <div><span class="lbl">Duration</span><b>41.3 min</b></div>
+                        <div><span class="lbl">Mission Status</span><b style="color:#4ade80;">COMPLETED</b></div>
+                        <div><span class="lbl">Data Source</span><b>Simulated Telemetry</b></div>
+                    </div>
+
+                    <!-- Flight phase timeline + events -->
+                    <div class="analytics-panel" style="margin-bottom: 12px;">
+                        <div class="panel-header-title">FLIGHT PHASE TIMELINE — click a phase or event to jump</div>
+                        <div class="rp-timeline-wrap">
+                            <div class="rp-phase-lane">
+                                <div class="rp-phase-seg" data-short="TAKEOFF" data-start="0" style="width:7.7%;">TAKEOFF</div>
+                                <div class="rp-phase-seg" data-short="CLIMB" data-start="3.2" style="width:10.4%;">CLIMB</div>
+                                <div class="rp-phase-seg" data-short="CLIMB" data-start="7.5" style="width:10.4%;">TRANS</div>
+                                <div class="rp-phase-seg" data-short="CRUISE" data-start="11.8" style="width:24.7%;">CRUISE</div>
+                                <div class="rp-phase-seg warn" data-short="HIGH LOAD" data-start="22.0" style="width:12.6%;">HIGH LOAD</div>
+                                <div class="rp-phase-seg fault" data-short="FAULT" data-start="27.2" style="width:9.7%;">ANOMALY</div>
+                                <div class="rp-phase-seg" data-short="RTB" data-start="31.2" style="width:17.7%;">RECOVERY</div>
+                                <div class="rp-phase-seg" data-short="LAND" data-start="38.5" style="width:6.8%;">LAND</div>
+                                <div id="rp-timeline-cursor" class="rp-cursor" style="left:0%;"></div>
+                            </div>
+                            <div id="rp-timeline-events" class="rp-event-lane"></div>
+                            <div class="rp-time-scale"><span>0</span><span>10</span><span>20</span><span>30</span><span>41.3 min</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Playback controls -->
+                    <div class="analytics-panel rp-controls-bar" style="margin-bottom: 12px;">
+                        <button id="rp-btn-play" class="rp-play-btn">▶ PLAY</button>
+                        <button id="rp-btn-reset" class="rp-ctl-btn">↺ RESET</button>
+                        <div class="rp-speed-group">
+                            <span class="lbl" style="margin-right:4px;">SPEED</span>
+                            <button class="rp-speed-btn" data-speed="0.5">0.5×</button>
+                            <button class="rp-speed-btn active" data-speed="1">1×</button>
+                            <button class="rp-speed-btn" data-speed="2">2×</button>
+                            <button class="rp-speed-btn" data-speed="4">4×</button>
+                        </div>
+                        <input type="range" id="replay-scrubber" class="gcs-slider rp-scrubber" min="0" max="413" step="0.1" value="0">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 340px 320px; gap: 12px;">
+                        <!-- Left: replay chart + profile -->
+                        <div style="display:flex; flex-direction:column; gap:12px; min-width:0;">
+                            <div class="analytics-panel">
+                                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+                                    <div class="panel-header-title">ENGINE TELEMETRY — HISTORICAL REPLAY</div>
+                                    <div class="rp-series-toggles">
+                                        <label style="color:#38bdf8;"><input type="checkbox" id="rp-series-rpm" checked> RPM</label>
+                                        <label style="color:#f59e0b;"><input type="checkbox" id="rp-series-cht" checked> CHT</label>
+                                        <label style="color:#4ade80;"><input type="checkbox" id="rp-series-ff" checked> Fuel</label>
+                                        <label style="color:#34d399;"><input type="checkbox" id="rp-series-health" checked> Health</label>
+                                        <label style="color:#ef4444;"><input type="checkbox" id="rp-series-anomaly" checked> Anomaly</label>
+                                        <label style="color:#fbbf24;"><input type="checkbox" id="rp-series-egt"> EGT</label>
+                                        <label style="color:#a78bfa;"><input type="checkbox" id="rp-series-map"> MAP</label>
+                                        <label style="color:#fb923c;"><input type="checkbox" id="rp-series-oil_temp"> Oil T</label>
+                                        <label style="color:#22d3ee;"><input type="checkbox" id="rp-series-oil_press"> Oil P</label>
+                                    </div>
+                                </div>
+                                <canvas id="canvas-replay-chart" style="width: 100%; height: 280px;"></canvas>
+                            </div>
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">MISSION PROFILE — ALTITUDE</div>
+                                <canvas id="canvas-replay-profile" style="width: 100%; height: 120px;"></canvas>
+                                <div id="rp-profile-caption" class="rp-profile-caption">TAKEOFF — 0.0 min</div>
+                            </div>
+                        </div>
+
+                        <!-- Middle: telemetry + state -->
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">ENGINE TELEMETRY @ CURSOR</div>
+                                <div class="rp-tel-grid">
+                                    <div class="prog-stat"><div class="lbl">RPM</div><div class="val" id="rp-tel-rpm">3200</div></div>
+                                    <div class="prog-stat"><div class="lbl">MAP</div><div class="val" id="rp-tel-map">22.0</div></div>
+                                    <div class="prog-stat"><div class="lbl">Fuel Flow</div><div class="val" id="rp-tel-ff">14.0</div></div>
+                                    <div class="prog-stat"><div class="lbl">CHT</div><div class="val" id="rp-tel-cht">72.0 °C</div></div>
+                                    <div class="prog-stat"><div class="lbl">EGT</div><div class="val" id="rp-tel-egt">480 °C</div></div>
+                                    <div class="prog-stat"><div class="lbl">Oil Temp</div><div class="val" id="rp-tel-oil-t">62.0 °C</div></div>
+                                    <div class="prog-stat"><div class="lbl">Oil Press</div><div class="val" id="rp-tel-oil-p">5.2 bar</div></div>
+                                    <div class="prog-stat"><div class="lbl">Battery</div><div class="val" id="rp-tel-bat">28.2 V</div></div>
+                                    <div class="prog-stat"><div class="lbl">Engine Health</div><div class="val" id="rp-tel-health">97%</div></div>
+                                    <div class="prog-stat"><div class="lbl">Anomaly Score</div><div class="val" id="rp-tel-anom">0.05</div></div>
+                                </div>
+                            </div>
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">REPLAY STATE</div>
+                                <div class="prog-kv"><span>Current Time</span><b id="rp-state-time">0.0 min</b></div>
+                                <div class="prog-kv"><span>Mission Phase</span><b id="rp-state-phase">Takeoff</b></div>
+                                <div class="prog-kv"><span>RPM</span><b id="rp-state-rpm">3200</b></div>
+                                <div class="prog-kv"><span>CHT</span><b id="rp-state-cht">72.0 °C</b></div>
+                                <div class="prog-kv"><span>Speed</span><b id="rp-state-speed">1.0× Real-time</b></div>
+                                <div class="prog-kv"><span>Engine Health</span><b id="rp-state-health" style="color:#4ade80;">97%</b></div>
+                                <div class="prog-kv"><span>Anomaly Score</span><b id="rp-state-anom" style="color:#4ade80;">0.05</b></div>
+                            </div>
+                        </div>
+
+                        <!-- Right: events + summary -->
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">EVENT DETAILS</div>
+                                <div id="rp-event-details"></div>
+                            </div>
+                            <div id="rp-beforeafter"></div>
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">MISSION EVENTS</div>
+                                <div id="rp-event-list" class="rp-event-list"></div>
+                            </div>
+                            <div class="analytics-panel">
+                                <div class="panel-header-title">MISSION REPLAY SUMMARY</div>
+                                <div class="prog-kv"><span>Flight Duration</span><b id="rp-sum-duration">41.3 min</b></div>
+                                <div class="prog-kv"><span>Maximum RPM</span><b id="rp-sum-rpm">—</b></div>
+                                <div class="prog-kv"><span>Maximum CHT</span><b id="rp-sum-cht">—</b></div>
+                                <div class="prog-kv"><span>Maximum EGT</span><b id="rp-sum-egt">—</b></div>
+                                <div class="prog-kv"><span>Anomalies Detected</span><b id="rp-sum-anom">—</b></div>
+                                <div class="prog-kv"><span>Fault Events</span><b id="rp-sum-faults">—</b></div>
+                                <div class="prog-kv"><span>Minimum Engine Health</span><b id="rp-sum-health">—</b></div>
+                                <div class="prog-kv"><span>Mission Outcome</span><b style="color:#4ade80;">COMPLETED</b></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 5: POST-FLIGHT DEBRIEF REPORT GENERATOR -->
+            <div id="view-debrief" class="gcs-view-panel">
+                <div class="view-content-wrapper">
+                    <div class="view-title-header">
+                        <span>📑 Automated Flight Debrief & Post-Mission Report</span>
+                        <div>
+                            <button id="btn-download-report" class="btn-rectify" style="padding: 6px 12px; background: #0284c7;">📥 Download Report (.md)</button>
+                        </div>
+                    </div>
+                    <div class="analytics-panel">
+                        <pre id="report-markdown-content" style="font-family: var(--font-mono); font-size: 11px; color: #cbd5e1; white-space: pre-wrap; line-height: 1.5;">Compiling mission summary…
+                        </pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 6: MAINTENANCE PLANNER -->
+            <div id="view-maint" class="gcs-view-panel">
+                <div class="view-content-wrapper">
+                    <div class="view-title-header">
+                        <span>🛠️ Predictive Maintenance Planner & Logistics Depot</span>
+                        <span style="font-size: 11px; color: #4ade80;">OEM TBO Limit: 2,000 h</span>
+                    </div>
+                    <div class="analytics-panel" style="margin-bottom: 16px;">
+                        <div class="panel-header-title">Automated Spare Parts Requisition</div>
+                        <p style="font-size: 11.5px; color: #94a3b8; margin-bottom: 10px;">
+                            DRISHTI proactively forecasts parts replacement based on vibration harmonic spectrum, thermal wear accumulation, and oil pressure delta.
+                        </p>
+                        <button id="btn-order-spares" class="btn-rectify" style="padding: 8px 16px; font-weight: 700;">📦 Dispatch Depot Spare Parts Requisition</button>
+                        <div id="spares-order-status" style="display: none; margin-top: 10px; font-size: 11px; color: #4ade80;"></div>
+                    </div>
+
+                    <div class="analytics-panel">
+                        <div class="panel-header-title">Technician Sign-Off Checklist</div>
+                        <div class="fault-check-list">
+                            <label class="fault-check-item"><input type="checkbox"><span>Cylinder #2 & #4 Spark Plug Clearance Inspection</span></label>
+                            <label class="fault-check-item"><input type="checkbox"><span>Scavenge Oil Filter Particle & Metallic Shaving Audit</span></label>
+                            <label class="fault-check-item"><input type="checkbox"><span>Propeller Reducer Gearbox Lash Measurement (<0.08 mm)</span></label>
+                            <label class="fault-check-item"><input type="checkbox"><span>FADEC ECU Dual-Lane Firmware Diagnostic Sign-Off</span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 7: ENGINE PASSPORT -->
+            <div id="view-passport" class="gcs-view-panel">
+                <div class="view-content-wrapper">
+                    <div class="view-title-header">
+                        <span>📜 Rotax 914 Engine Passport & Tamper-Evident Audit Trail</span>
+                        <span style="font-size: 11px; color: #38bdf8;">SHA-256 Ledger Verified</span>
+                    </div>
+
+                    <!-- Rotax 914 PS1 Model Data: Engine Specifications & OEM Operating Limits -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div class="analytics-panel">
+                            <div class="panel-header-title">Rotax 914 — PS1 Model Data: Engine / Performance</div>
+                            <table class="gcs-data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th style="text-align: right;">Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Cylinders</td><td style="text-align: right;">4</td></tr>
+                                    <tr><td>Take-off power</td><td style="text-align: right;">84.5 kW / 115 HP</td></tr>
+                                    <tr><td>Max continuous power</td><td style="text-align: right;">73.5 kW / 100 HP</td></tr>
+                                    <tr><td>Take-off RPM</td><td style="text-align: right;">5800 rpm</td></tr>
+                                    <tr><td>Max continuous RPM</td><td style="text-align: right;">5500 rpm</td></tr>
+                                    <tr><td>Idle RPM</td><td style="text-align: right;">≥ 1400 rpm</td></tr>
+                                    <tr><td>Reduction gearbox</td><td style="text-align: right;">2.43 : 1</td></tr>
+                                    <tr><td>Firing order</td><td style="text-align: right;">1–4–2–3</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="analytics-panel">
+                            <div class="panel-header-title">Rotax 914 — OEM Operating Limits</div>
+                            <table class="gcs-data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th style="text-align: right;">Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Take-off RPM</td><td style="text-align: right;">5800 rpm, max 5 min</td></tr>
+                                    <tr><td>Continuous RPM</td><td style="text-align: right;">5500 rpm</td></tr>
+                                    <tr><td>Take-off manifold pressure</td><td style="text-align: right;">1350 hPa max</td></tr>
+                                    <tr><td>Continuous manifold pressure</td><td style="text-align: right;">1200 hPa max</td></tr>
+                                    <tr><td>Take-off critical altitude</td><td style="text-align: right;">2450 m</td></tr>
+                                    <tr><td>Continuous critical altitude</td><td style="text-align: right;">4875 m</td></tr>
+                                    <tr><td>Airbox intervention temperature</td><td style="text-align: right;">72 °C / 88 °C (config dependent)</td></tr>
+                                    <tr><td>Oil pressure</td><td style="text-align: right;">0.8–7 bar depending on RPM</td></tr>
+                                    <tr><td>Normal oil pressure &gt; 3500 rpm</td><td style="text-align: right;">2–5 bar</td></tr>
+                                    <tr><td>Oil temperature</td><td style="text-align: right;">90–110 °C normal</td></tr>
+                                    <tr><td>Oil temperature limits</td><td style="text-align: right;">50–130 °C</td></tr>
+                                    <tr><td>EGT maximum</td><td style="text-align: right;">950 °C</td></tr>
+                                    <tr><td>CHT maximum</td><td style="text-align: right;">135 °C</td></tr>
+                                    <tr><td>Coolant maximum</td><td style="text-align: right;">120 °C</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="analytics-panel">
+                        <table class="gcs-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Flight Hours</th>
+                                    <th>Lifecycle Event</th>
+                                    <th>Maintenance Action</th>
+                                    <th>Cryptographic Hash</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>0.0 h</td>
+                                    <td>Initial Commissioning</td>
+                                    <td>Rotax Factory Certificate of Airworthiness</td>
+                                    <td><code style="color:#38bdf8;">e3b0c44298fc1c149afb</code></td>
+                                </tr>
+                                <tr>
+                                    <td>150.0 h</td>
+                                    <td>Scheduled 150h Service</td>
+                                    <td>Replaced oil filter & spark plugs (Lanes A/B)</td>
+                                    <td><code style="color:#38bdf8;">7a52f9b8c19a4e2101bb</code></td>
+                                </tr>
+                                <tr>
+                                    <td>342.5 h</td>
+                                    <td>Current Flight Operation</td>
+                                    <td>DRISHTI Real-Time Active Stream</td>
+                                    <td><code style="color:#4ade80;">4f9812a0d1e56b3c99fe</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 8: SETTINGS -->
+            <div id="view-settings" class="gcs-view-panel">
+                <div class="view-content-wrapper">
+                    <div class="view-title-header">
+                        <span>⚙️ Ground Control Station System Settings</span>
+                        <span id="rbac-role-badge" style="font-size: 11px; color: #38bdf8;">Flight Director</span>
+                    </div>
+                    <div class="analytics-panel" style="margin-bottom: 16px;">
+                        <div class="panel-header-title">Role-Based Access Control (RBAC)</div>
+                        <select id="select-user-role" class="gcs-select" style="max-width: 300px;">
+                            <option value="Flight Director">Flight Director (Full Authorization)</option>
+                            <option value="Maintenance Technician">Maintenance Technician (Diagnostics & Sign-Off)</option>
+                            <option value="Observer">Observer (Read-Only Telemetry)</option>
+                        </select>
+                    </div>
+
+                    <div class="analytics-panel">
+                        <div class="panel-header-title">Audio Alarms & Telemetry Calibration</div>
+                        <button id="btn-mute-audio" class="btn-rectify" style="padding: 8px 16px; margin-bottom: 14px;">🔊 Audio Alarms Enabled</button>
+                        <div style="font-size: 11px; color: #94a3b8;">
+                            Audio alarm uses Web Audio API to synthesize dual-tone cockpit chimes for master warning and caution alerts without requiring external sound files.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Scripts -->
+<script src="js/diagnostics.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/gauges.js"></script>
+<script src="js/tapes.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/prognostics.js"></script>
+<script src="js/replay.js"></script>
+<script src="js/ml_model.js"></script>
+<script src="js/ml_classifier.js"></script>
+<script src="js/simulation.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
